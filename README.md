@@ -1,6 +1,31 @@
 # forza_motorsport
 Various utilities to work with data from the Forza Motorsport and Forza Horizon games' data stream.
 
+## Installation
+
+<!-- one-command-install -->
+> **One-command install** — clone, configure, and run in a single step:
+>
+> ```bash
+> curl -fsSL https://raw.githubusercontent.com/jasperan/forza_motorsport/master/install.sh | bash
+> ```
+>
+> <details><summary>Advanced options</summary>
+>
+> Override install location:
+> ```bash
+> PROJECT_DIR=/opt/myapp curl -fsSL https://raw.githubusercontent.com/jasperan/forza_motorsport/master/install.sh | bash
+> ```
+>
+> Or install manually:
+> ```bash
+> git clone https://github.com/jasperan/forza_motorsport.git
+> cd forza_motorsport
+> # See below for setup instructions
+> ```
+> </details>
+
+
 ## fdp.py
 A Python class containing all properties available in the data packets sent by the game's "data out" stream. This class supports packets for the original "sled" format in Forza Motorsport, the newer "dash cam" format, as well as the format in Forza Horizon 4.
 
