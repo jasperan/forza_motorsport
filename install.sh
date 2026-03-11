@@ -7,6 +7,9 @@ set -euo pipefail
 #
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/jasperan/forza_motorsport/master/install.sh | bash
+#
+# Override install location:
+#   PROJECT_DIR=/opt/myapp curl -fsSL ... | bash
 # ============================================================
 
 REPO_URL="https://github.com/jasperan/forza_motorsport.git"
