@@ -26,6 +26,15 @@ Various utilities to work with data from the Forza Motorsport and Forza Horizon 
 > </details>
 
 
+## Prerequisites
+
+- Python 3.6+
+- [PyYAML](https://pypi.org/project/PyYAML/) (only needed if you use a configuration file with `-c`)
+
+```bash
+pip install pyyaml
+```
+
 ## fdp.py
 A Python class containing all properties available in the data packets sent by the game's "data out" stream. This class supports packets for the original "sled" format in Forza Motorsport, the newer "dash cam" format, as well as the format in Forza Horizon 4.
 

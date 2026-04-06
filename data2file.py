@@ -1,4 +1,4 @@
-#!/usr/env/python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 '''
 Script to listen on a given port for UDP packets sent by a Forza Motorsport 7
