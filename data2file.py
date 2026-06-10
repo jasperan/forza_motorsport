@@ -29,7 +29,6 @@ import csv
 import logging
 import socket
 
-import yaml
 import datetime as dt
 
 from fdp import ForzaDataPacket
@@ -46,7 +45,7 @@ def to_str(value):
 
     return('{}'.format(value))
 
-def dump_stream(port, output_filename, format='tsv',
+def dump_stream(port, output_filename, file_format='tsv',
                 append=False, packet_format='dash', config_file = None):
     '''
     Opens the given output filename, listens to UDP packets on the given port
@@ -58,8 +57,8 @@ def dump_stream(port, output_filename, format='tsv',
     :param output_filename: path to the file we will write to
     :type output_filename: str
 
-    :param format: what format to write out, either 'tsv' or 'csv'
-    :type format: str
+    :param file_format: what format to write out, either 'tsv' or 'csv'
+    :type file_format: str
 
     :param append: if set, the output file will be opened for appending and
                    the header with column names is not written out
@@ -73,47 +72,34 @@ def dump_stream(port, output_filename, format='tsv',
     :type config_file: str
     '''
 
+    config = {}
     if config_file:
         import yaml
         with open(config_file) as f:
-            config = yaml.safe_load(f)
+            config = yaml.safe_load(f) or {}
 
-        ## The configuration can override everything
-        if 'port' in config:
-            port = config['port']
+    ## The configuration file can override everything passed as arguments.
+    port = config.get('port', port)
+    output_filename = config.get('output_filename', output_filename)
+    file_format = config.get('format', file_format)
+    append = config.get('append', append)
+    packet_format = config.get('packet_format', packet_format)
 
-        if 'output_filename' in config:
-            output_filename = config['output_filename']
+    params = config.get('parameter_list') \
+        or ForzaDataPacket.get_props(packet_format = packet_format)
 
-        if 'format' in config:
-            format = config['format']
+    log_wall_clock = 'wall_clock' in params
 
-        if 'append' in config:
-            append = config['append']
-
-        if 'packet_format' in config:
-            packet_format = config['packet_format']
-
-    params = ForzaDataPacket.get_props(packet_format = packet_format)
-    if config_file and 'parameter_list' in config:
-        params = config['parameter_list']
-
-    log_wall_clock = False
-    if 'wall_clock' in params:
-        log_wall_clock = True
-
-    open_mode = 'w'
-    if append:
-        open_mode = 'a'
+    open_mode = 'a' if append else 'w'
 
     with open(output_filename, open_mode, buffering=1) as outfile:
-        if format == 'csv':
+        if file_format == 'csv':
             csv_writer = csv.writer(outfile)
             if not append:
                 csv_writer.writerow(params)
 
         ## If we're not appending, add a header row:
-        if format == 'tsv' and not append:
+        if file_format == 'tsv' and not append:
             outfile.write('\t'.join(params))
             outfile.write('\n')
                 
@@ -125,7 +111,7 @@ def dump_stream(port, output_filename, format='tsv',
         n_packets = 0
         
         while True:
-            message, address = server_socket.recvfrom(1024)
+            message, _ = server_socket.recvfrom(1024)
             fdp = ForzaDataPacket(message, packet_format = packet_format)
             if log_wall_clock:
                 fdp.wall_clock = dt.datetime.now()
@@ -134,7 +120,7 @@ def dump_stream(port, output_filename, format='tsv',
                 if n_packets == 0:
                     logging.info('{}: in race, logging data'.format(dt.datetime.now()))
                 
-                if format == 'csv':
+                if file_format == 'csv':
                     csv_writer.writerow(fdp.to_list(params))
                 else:
                     outfile.write('\t'.join([to_str(v) \
@@ -188,7 +174,7 @@ def main():
     dump_stream(args.port, args.output_filename, args.format, args.append,
                 args.packet_format, args.config_file)
 
-    return()
+    return
 
 if __name__ == "__main__":
     main()

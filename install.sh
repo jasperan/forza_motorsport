@@ -36,7 +36,7 @@ print_banner() {
     echo ""
     echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo -e "${BOLD}  forza_motorsport${NC}"
-    echo -e "  forza_motorsport"
+    echo -e "  Forza telemetry logger"
     echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo ""
 }
@@ -61,7 +61,8 @@ check_prereqs() {
 
 install_deps() {
     cd "$INSTALL_DIR"
-    success "No additional dependencies to install"
+    success "Core logger needs only the Python standard library"
+    info "Optional: 'pip install pyyaml' to use a -c YAML configuration file"
 }
 
 main() {

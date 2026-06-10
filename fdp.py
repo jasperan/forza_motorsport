@@ -35,11 +35,11 @@ class ForzaDataPacket:
 
     ## Format string that allows unpack to process the data bytestream
     ## for the V1 format called 'sled'
-    sled_format = '<iIfffffffffffffffffffffffffffffffffffffffffffffffffffiiiii'
+    sled_format = '<iI' + 'f' * 51 + 'i' * 5
 
     ## Format string for the V2 format called 'car dash'
-    dash_format = '<iIfffffffffffffffffffffffffffffffffffffffffffffffffffiiiiifffffffffffffffffHBBBBBBbbb'
-    
+    dash_format = sled_format + 'f' * 17 + 'H' + 'B' * 6 + 'b' * 3
+
     ## Names of the properties in the order they're featured in the packet:
     sled_props = [
         'is_race_on', 'timestamp_ms',
@@ -82,27 +82,32 @@ class ForzaDataPacket:
                   'accel', 'brake', 'clutch', 'handbrake',
                   'gear', 'steer',
                   'norm_driving_line', 'norm_ai_brake_diff']
-    
+
+    ## Single source of truth mapping each packet format to its (struct
+    ## format string, ordered property names). Resolved once per packet
+    ## rather than re-branched at every call site.
+    FORMATS = {
+        'sled': (sled_format, sled_props),
+        'dash': (dash_format, sled_props + dash_props),
+        'fh4':  (dash_format, sled_props + dash_props),
+    }
+
     def __init__(self, data, packet_format='dash'):
         ## The format this data packet was created with:
         self.packet_format = packet_format
-        
+
+        struct_format, self.props = self.FORMATS[packet_format]
+
+        if packet_format == 'fh4':
+            ## FH4 inserts 12 unknown bytes at offset 232; strip them so the
+            ## remaining bytes match the standard 'dash' layout.
+            data = data[:232] + data[244:323]
+
         ## zip makes for convenient flexibility when mapping names to
         ## values in the data packet:
-        if packet_format == 'sled':
-            for prop_name, prop_value in zip(self.sled_props,
-                                             unpack(self.sled_format, data)):
-                setattr(self, prop_name, prop_value)
-        elif packet_format == 'fh4':
-            patched_data = data[:232] + data[244:323]
-            for prop_name, prop_value in zip(self.sled_props + self.dash_props,
-                                             unpack(self.dash_format,
-                                                    patched_data)):
-                setattr(self, prop_name, prop_value)
-        else:
-            for prop_name, prop_value in zip(self.sled_props + self.dash_props,
-                                             unpack(self.dash_format, data)):
-                setattr(self, prop_name, prop_value)
+        for prop_name, prop_value in zip(self.props,
+                                         unpack(struct_format, data)):
+            setattr(self, prop_name, prop_value)
 
     @classmethod
     def get_props(cls, packet_format = 'dash'):
@@ -110,17 +115,14 @@ class ForzaDataPacket:
         Return the list of properties in the data packet, in order.
 
         :param packet_format: which packet format to get properties for,
-                              one of either 'sled' or 'dash'
+                              one of 'sled', 'dash', or 'fh4'
         :type packet_format: str
         '''
-        if packet_format == 'sled':
-            return(cls.sled_props)
-
-        return(cls.sled_props + cls.dash_props)
+        return(cls.FORMATS[packet_format][1])
 
     def to_list(self, attributes):
         '''
-        Return the values of this data packet, in order. If a list of 
+        Return the values of this data packet, in order. If a list of
         attributes are provided, only return those.
 
         :param attributes: the attributes to return
@@ -128,28 +130,15 @@ class ForzaDataPacket:
         '''
         if attributes:
             return([getattr(self, a) for a in attributes])
-        
-        if self.packet_format == 'sled':
-            return([getattr(self, prop_name) for prop_name in self.sled_props])
 
-        return([getattr(self, prop_name) for prop_name in \
-                self.sled_props + self.dash_props])
+        return([getattr(self, prop_name) for prop_name in self.props])
 
-    def get_format(self):
-        '''
-        Return the format this packet was sent with.
-        '''
-        return(self.packet_format)
-            
     def get_tsv_header(self):
         '''
         Return a tab-separated string with the names of all properties in the order defined in the data packet.
         '''
-        if self.packet_format == 'sled':
-            return('\t'.join(self.sled_props))
+        return('\t'.join(self.props))
 
-        return('\t'.join(self.sled_props + self.dash_props))
-        
     def to_tsv(self):
         '''
         Return a tab-separated values string with all data in the given order.
