@@ -31,8 +31,18 @@ Various utilities to work with data from the Forza Motorsport and Forza Horizon 
 - Python 3.6+
 - [PyYAML](https://pypi.org/project/PyYAML/) (only needed if you use a configuration file with `-c`)
 
+The data logger itself relies only on the Python standard library. PyYAML is
+an optional dependency that is just used to read configuration files. Install
+it directly:
+
 ```bash
 pip install pyyaml
+```
+
+or pull it in through the packaged `config` extra:
+
+```bash
+pip install "forza-motorsport[config]"
 ```
 
 ## fdp.py

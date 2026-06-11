@@ -1,7 +1,12 @@
 [project]
 name = "forza-motorsport"
 version = "0.1.0"
-requires-python = ">=3.12"
+requires-python = ">=3.6"
 dependencies = []
+
+## PyYAML is only needed when a YAML configuration file is passed via the
+## -c/--config_file flag. Install it with: pip install "forza-motorsport[config]"
+[project.optional-dependencies]
+config = ["pyyaml"]
 
 [tool.uv]

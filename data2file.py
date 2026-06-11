@@ -41,9 +41,9 @@ def to_str(value):
     :param value: the value to format
     '''
     if isinstance(value, float):
-        return('{:f}'.format(value))
+        return '{:f}'.format(value)
 
-    return('{}'.format(value))
+    return '{}'.format(value)
 
 def dump_stream(port, output_filename, file_format='tsv',
                 append=False, packet_format='dash', config_file = None):
@@ -92,7 +92,10 @@ def dump_stream(port, output_filename, file_format='tsv',
 
     open_mode = 'a' if append else 'w'
 
-    with open(output_filename, open_mode, buffering=1) as outfile:
+    ## newline='' is required by the csv module so the writer's line
+    ## terminator is not re-translated (which produces \r\r\n on Windows).
+    ## The TSV branch writes explicit '\n' and is unaffected.
+    with open(output_filename, open_mode, buffering=1, newline='') as outfile:
         if file_format == 'csv':
             csv_writer = csv.writer(outfile)
             if not append:
@@ -102,38 +105,44 @@ def dump_stream(port, output_filename, file_format='tsv',
         if file_format == 'tsv' and not append:
             outfile.write('\t'.join(params))
             outfile.write('\n')
-                
+
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         server_socket.bind(('', port))
 
         logging.info('listening on port {}'.format(port))
 
         n_packets = 0
-        
-        while True:
-            message, _ = server_socket.recvfrom(1024)
-            fdp = ForzaDataPacket(message, packet_format = packet_format)
-            if log_wall_clock:
-                fdp.wall_clock = dt.datetime.now()
 
-            if fdp.is_race_on:
-                if n_packets == 0:
-                    logging.info('{}: in race, logging data'.format(dt.datetime.now()))
-                
-                if file_format == 'csv':
-                    csv_writer.writerow(fdp.to_list(params))
+        ## Run until interrupted (e.g. Ctrl-C), exiting cleanly without a
+        ## traceback as documented in the README.
+        try:
+            while True:
+                message, _ = server_socket.recvfrom(1024)
+                fdp = ForzaDataPacket(message, packet_format = packet_format)
+                if log_wall_clock:
+                    fdp.wall_clock = dt.datetime.now()
+
+                if fdp.is_race_on:
+                    if n_packets == 0:
+                        logging.info('{}: in race, logging data'.format(dt.datetime.now()))
+
+                    if file_format == 'csv':
+                        csv_writer.writerow(fdp.to_list(params))
+                    else:
+                        outfile.write('\t'.join([to_str(v) \
+                                                 for v in fdp.to_list(params)]))
+                        outfile.write('\n')
+
+                    n_packets += 1
+                    if n_packets % 60 == 0:
+                        logging.info('{}: logged {} packets'.format(dt.datetime.now(), n_packets))
                 else:
-                    outfile.write('\t'.join([to_str(v) \
-                                             for v in fdp.to_list(params)]))
-                    outfile.write('\n')
-
-                n_packets += 1
-                if n_packets % 60 == 0:
-                    logging.info('{}: logged {} packets'.format(dt.datetime.now(), n_packets))
-            else:
-                if n_packets > 0:
-                    logging.info('{}: out of race, stopped logging data'.format(dt.datetime.now()))
-                n_packets = 0
+                    if n_packets > 0:
+                        logging.info('{}: out of race, stopped logging data'.format(dt.datetime.now()))
+                    n_packets = 0
+        except KeyboardInterrupt:
+            logging.info('{}: stopped logging, wrote {} packets'.format(
+                dt.datetime.now(), n_packets))
 
 def main():
     import argparse
@@ -174,8 +183,5 @@ def main():
     dump_stream(args.port, args.output_filename, args.format, args.append,
                 args.packet_format, args.config_file)
 
-    return
-
 if __name__ == "__main__":
     main()
-    
